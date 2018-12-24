@@ -49,11 +49,9 @@ MODEPRESET20 = 56
 class ZenggeWifiBulb(object):
     def __init__(self, host):
         """Initialization"""
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.host = host
         self.port = 5577
         self.timeout = 5
-        self.state = state(0, False, 0, 0, color(0, 0, 0, 0, True), 0)
 
     def checksum(self, data):
         sum = 0
@@ -69,16 +67,19 @@ class ZenggeWifiBulb(object):
         self.sendraw(senddata)
         data = self.sock.recv(14)
         self.state = state(data[1], data[2] == ON, data[3], data[5], color(data[6], data[7], data[8], data[9], data[12] == TRUE), data[10])
+        return self.state
 
     def get_bulb_state(self):
         self.get_status()
         return self.state.isOn
 
     def connect(self):
+        self.sock = socket.socket()
         try:
             self.sock.connect((self.host, self.port))
+            return True
         except OSError:
-            pass
+            return False
 
     def close(self):
         self.sock.shutdown(socket.SHUT_RDWR)
@@ -88,11 +89,19 @@ class ZenggeWifiBulb(object):
         self.connect()
         msg.append(FALSE)
         msg.append(self.checksum(msg))
-        self.sock.sendall(bytes(msg))
+        try:
+            self.sock.sendall(bytes(msg))
+            return True
+        except OSError:
+            return False
     
     def sendraw(self, msg):
         self.connect()
-        self.sock.sendall(bytes(msg))
+        try:
+            self.sock.sendall(bytes(msg))
+            return True
+        except OSError:
+            return False
     
     def format_set_power(self, on):
         if on == True:
@@ -108,13 +117,17 @@ class ZenggeWifiBulb(object):
             buf.append(FALSE)
         return buf
 
+    def set_rgb(self, red, green, blue):
+        return self.send(self.format_set_color(color(red, green, blue, 0, True)))
 
-    def set_on(self, color_value):
-        self.send(self.format_set_power(True))
-        self.send(self.format_set_color(color_value))
+    def set_white(self, white):
+        return self.send(self.format_set_color(color(0, 0, 0, white, False)))
 
-    def set_off(self):
-        self.send(self.format_set_power(False))
+    def on(self):
+        return self.send(self.format_set_power(True))
+
+    def off(self):
+        return self.send(self.format_set_power(False))
 
 class state:
     def __init__(self, deviceType, isOn, Mode, Slowness, Color, LedVersionNum):
