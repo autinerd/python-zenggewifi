@@ -2,25 +2,25 @@ import socket
 
 name = "zenggewifi"
 
-TRUE = 0XF0
-FALSE = 0X0F
-ON = 0X23
-OFF = 0X24
-COMMANDSETTIME       = (0X10)
-COMMANDSETTIME2      = (0X14)
-COMMANDGETTIME       = (0X11)
-COMMANDGETTIME2      = (0X1A)
-COMMANDGETTIME3      = (0X1B)
-COMMANDGETTIMERS     = (0X22)
-COMMANDGETTIMERS2    = (0X2A)
-COMMANDGETTIMERS3    = (0X2B)
-COMMANDSETCOLOR      = (0X31)
-COMMANDSETMUSICCOLOR = (0X41)
-COMMANDSETMODE       = (0X61)
-COMMANDSETPOWER      = (0X71)
-COMMANDGETSTATE      = (0X81)
-COMMANDGETSTATE2     = (0X8A)
-COMMANDGETSTATE3     = (0X8B)
+TRUE                 = 0xF0
+FALSE                = 0x0F
+ON                   = 0x23
+OFF                  = 0x24
+COMMANDSETTIME       = 0x10
+COMMANDSETTIME2      = 0x14
+COMMANDGETTIME       = 0x11
+COMMANDGETTIME2      = 0x1A
+COMMANDGETTIME3      = 0x1B
+COMMANDGETTIMERS     = 0x22
+COMMANDGETTIMERS2    = 0x2A
+COMMANDGETTIMERS3    = 0x2B
+COMMANDSETCOLOR      = 0x31
+COMMANDSETMUSICCOLOR = 0x41
+COMMANDSETMODE       = 0x61
+COMMANDSETPOWER      = 0x71
+COMMANDGETSTATE      = 0x81
+COMMANDGETSTATE2     = 0x8A
+COMMANDGETSTATE3     = 0x8B
 
 MODECOLOR    = 97
 MODEMUSIC    = 98
@@ -64,8 +64,12 @@ class ZenggeWifiBulb(object):
         self.connect()
         senddata = [COMMANDGETSTATE, COMMANDGETSTATE2, COMMANDGETSTATE3]
         senddata.append(self.checksum(senddata))
-        self.sendraw(senddata)
-        data = self.sock.recv(14)
+        try:
+            if self.sendraw(senddata) is False:
+                return False
+            data = self.sock.recv(14)
+        except OSError:
+            return False
         self.state = state(data[1], data[2] == ON, data[3], data[5], color(data[6], data[7], data[8], data[9], data[12] == TRUE), data[10])
         return self.state
 
@@ -138,55 +142,10 @@ class state:
         self.Color = Color
         self.LedVersionNum = int(LedVersionNum)
 
-class color:    
+class color:
     def __init__(self, R, G, B, W, IgnoreW):
         self.R = int(R)
         self.G = int(G)
         self.B = int(B)
         self.W = int(W)
         self.IgnoreW = bool(IgnoreW)
-
-    @staticmethod
-    def rgb2hsv(color_data):
-        R = color_data.R / 255
-        G = color_data.G / 255
-        B = color_data.B / 255
-        max_value = max([R, G, B])
-        min_value = min([R, G, B])
-        h = 0
-        if max_value == min_value:
-            h = 0
-        elif max_value == color_data.R:
-            h = 60 * ((color_data.G - color_data.B) / (max_value - min_value))
-        elif max_value == color_data.G:
-            h = 60 * (2 + ((color_data.B - color_data.R) / (max_value - min_value)))
-        elif max_value == color_data.B:
-            h = 60 * (4 + ((color_data.R - color_data.G) / (max_value - min_value)))
-        if h < 0:
-            h += 360
-        s = 0
-        if max_value > 0:
-            s = (max_value - min_value) / max_value
-        v = max_value
-        return h, s * 100, v * 100
-
-    @staticmethod
-    def hsv2rgb(h, s, v):
-        import math
-        s = s / 100
-        v = v / 100
-        hi = math.floor(h / 60)
-        f = ((h / 60) - hi)
-        p = v * (1 - s)
-        q = v * (1 - s * f)
-        t = v * (1 - s * (1 - f))
-        switch = {
-            0: color(v * 255, t * 255, p * 255, 0, True),
-            1: color(q * 255, v * 255, p * 255, 0, True),
-            2: color(p * 255, v * 255, t * 255, 0, True),
-            3: color(p * 255, q * 255, v * 255, 0, True),
-            4: color(t * 255, p * 255, v * 255, 0, True),
-            5: color(v * 255, p * 255, q * 255, 0, True),
-            6: color(v * 255, t * 255, p * 255, 0, True)
-        }
-        return switch.get(hi)

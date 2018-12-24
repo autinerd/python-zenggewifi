@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="zenggewifi",
-    version="0.0.2",
+    version="0.0.3",
     author="Sidney Kuyateh",
     author_email="sidneyjohn23@icloud.com",
     description="Communication to Zengge Wifi bulbs",
